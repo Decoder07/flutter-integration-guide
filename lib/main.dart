@@ -13,21 +13,11 @@ void main() {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Flutter Demo',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // Try running your application with "flutter run". You'll see the
-        // application has a blue toolbar. Then, without quitting the app, try
-        // changing the primarySwatch below to Colors.green and then invoke
-        // "hot reload" (press "r" in the console where you ran "flutter run",
-        // or simply save your changes to "hot reload" in a Flutter IDE).
-        // Notice that the counter didn't reset back to zero; the application
-        // is not restarted.
         primarySwatch: Colors.blue,
       ),
       home: const MyHomePage(title: '100ms Integration Guide'),
@@ -37,16 +27,6 @@ class MyApp extends StatelessWidget {
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
   final String title;
 
   @override
@@ -76,16 +56,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
       appBar: AppBar(
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
         title: Text(widget.title),
       ),
       body: Container(
@@ -251,56 +223,36 @@ class _MeetingPageState extends State<MeetingPage>
   @override
   void onAudioDeviceChanged(
       {HMSAudioDevice? currentAudioDevice,
-      List<HMSAudioDevice>? availableAudioDevice}) {
-    // TODO: implement onAudioDeviceChanged
-  }
+      List<HMSAudioDevice>? availableAudioDevice}) {}
 
   @override
   void onChangeTrackStateRequest(
-      {required HMSTrackChangeRequest hmsTrackChangeRequest}) {
-    // TODO: implement onChangeTrackStateRequest
-  }
+      {required HMSTrackChangeRequest hmsTrackChangeRequest}) {}
 
   @override
-  void onHMSError({required HMSException error}) {
-    // TODO: implement onHMSError
-  }
+  void onHMSError({required HMSException error}) {}
 
   @override
-  void onMessage({required HMSMessage message}) {
-    // TODO: implement onMessage
-  }
+  void onMessage({required HMSMessage message}) {}
 
   @override
-  void onReconnected() {
-    // TODO: implement onReconnected
-  }
+  void onReconnected() {}
 
   @override
-  void onReconnecting() {
-    // TODO: implement onReconnecting
-  }
+  void onReconnecting() {}
 
   @override
   void onRemovedFromRoom(
-      {required HMSPeerRemovedFromPeer hmsPeerRemovedFromPeer}) {
-    // TODO: implement onRemovedFromRoom
-  }
+      {required HMSPeerRemovedFromPeer hmsPeerRemovedFromPeer}) {}
 
   @override
-  void onRoleChangeRequest({required HMSRoleChangeRequest roleChangeRequest}) {
-    // TODO: implement onRoleChangeRequest
-  }
+  void onRoleChangeRequest({required HMSRoleChangeRequest roleChangeRequest}) {}
 
   @override
-  void onRoomUpdate({required HMSRoom room, required HMSRoomUpdate update}) {
-    // TODO: implement onRoomUpdate
-  }
+  void onRoomUpdate({required HMSRoom room, required HMSRoomUpdate update}) {}
 
   @override
-  void onUpdateSpeakers({required List<HMSSpeaker> updateSpeakers}) {
-    // TODO: implement onUpdateSpeakers
-  }
+  void onUpdateSpeakers({required List<HMSSpeaker> updateSpeakers}) {}
 
   @override
   Widget build(BuildContext context) {
