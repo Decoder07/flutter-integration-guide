@@ -1,6 +1,10 @@
+import 'dart:developer';
+import 'dart:io';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:hmssdk_flutter/hmssdk_flutter.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 void main() {
   runApp(const MyApp());
@@ -26,7 +30,7 @@ class MyApp extends StatelessWidget {
         // is not restarted.
         primarySwatch: Colors.blue,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const MyHomePage(title: '100ms Integration Guide'),
     );
   }
 }
@@ -50,6 +54,26 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  bool res = false;
+
+  static Future<bool> getPermissions() async {
+    if (Platform.isIOS) return true;
+    await Permission.camera.request();
+    await Permission.microphone.request();
+    await Permission.bluetoothConnect.request();
+
+    while ((await Permission.camera.isDenied)) {
+      await Permission.camera.request();
+    }
+    while ((await Permission.microphone.isDenied)) {
+      await Permission.microphone.request();
+    }
+    while ((await Permission.bluetoothConnect.isDenied)) {
+      await Permission.bluetoothConnect.request();
+    }
+    return true;
+  }
+
   @override
   Widget build(BuildContext context) {
     // This method is rerun every time setState is called, for instance as done
@@ -64,25 +88,31 @@ class _MyHomePageState extends State<MyHomePage> {
         // the App.build method, and use it to set our appbar title.
         title: Text(widget.title),
       ),
-      body: Center(
-        child: ElevatedButton(
-          style: ButtonStyle(
-              shape: MaterialStateProperty.all<RoundedRectangleBorder>(
-                  RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8.0),
-          ))),
-          onPressed: () => {
-            Navigator.push(context,
-                CupertinoPageRoute(builder: (_) => const MeetingPage()))
-          },
-          child: const Padding(
-            padding: EdgeInsets.symmetric(vertical: 12, horizontal: 10),
-            child: Text(
-              'Join',
+      body: Container(
+        color: Colors.black,
+        child: Center(
+          child: ElevatedButton(
+            style: ButtonStyle(
+                shape: MaterialStateProperty.all<RoundedRectangleBorder>(
+                    RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8.0),
+            ))),
+            onPressed: () async => {
+              res = await getPermissions(),
+              if (res)
+                Navigator.push(context,
+                    CupertinoPageRoute(builder: (_) => const MeetingPage()))
+            },
+            child: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 20, horizontal: 20),
+              child: Text(
+                'Join',
+                style: TextStyle(fontSize: 20),
+              ),
             ),
           ),
         ),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+      ),
     );
   }
 }
@@ -114,13 +144,26 @@ class _MeetingPageState extends State<MeetingPage>
   }
 
   @override
+  void dispose() {
+    remotePeer = null;
+    remotePeerVideoTrack = null;
+    localPeer = null;
+    localPeerVideoTrack = null;
+    super.dispose();
+  }
+
+  @override
   void onJoin({required HMSRoom room}) {
-    // TODO: implement onJoin
     room.peers?.forEach((peer) {
       if (peer.isLocal) {
         localPeer = peer;
         if (peer.videoTrack != null) {
           localPeerVideoTrack = peer.videoTrack;
+        }
+        if (mounted) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            setState(() {});
+          });
         }
       }
     });
@@ -128,27 +171,36 @@ class _MeetingPageState extends State<MeetingPage>
 
   @override
   void onPeerUpdate({required HMSPeer peer, required HMSPeerUpdate update}) {
+    if (update == HMSPeerUpdate.networkQualityUpdated) {
+      return;
+    }
     if (update == HMSPeerUpdate.peerJoined) {
       if (!peer.isLocal) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          setState(() {
-            remotePeer = peer;
+        if (mounted) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            setState(() {
+              remotePeer = peer;
+            });
           });
-        });
+        }
       }
     } else if (update == HMSPeerUpdate.peerLeft) {
       if (!peer.isLocal) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          setState(() {
-            remotePeer = null;
+        if (mounted) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            setState(() {
+              remotePeer = null;
+            });
           });
-        });
+        }
       } else {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          setState(() {
-            localPeer = null;
+        if (mounted) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            setState(() {
+              localPeer = null;
+            });
           });
-        });
+        }
       }
     }
   }
@@ -161,32 +213,37 @@ class _MeetingPageState extends State<MeetingPage>
     if (track.kind == HMSTrackKind.kHMSTrackKindVideo) {
       if (trackUpdate == HMSTrackUpdate.trackRemoved) {
         if (peer.isLocal) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            setState(() {
-              localPeerVideoTrack = null;
+          if (mounted) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              setState(() {
+                localPeerVideoTrack = null;
+              });
             });
-          });
+          }
         } else {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            setState(() {
-              remotePeerVideoTrack = null;
+          if (mounted) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              setState(() {
+                remotePeerVideoTrack = null;
+              });
             });
-          });
+          }
         }
         return;
       }
       if (peer.isLocal) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
           setState(() {
             localPeerVideoTrack = track as HMSVideoTrack;
           });
-        });
+        }
       } else {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
+        log("Reached here");
+        if (mounted) {
           setState(() {
             remotePeerVideoTrack = track as HMSVideoTrack;
           });
-        });
+        }
       }
     }
   }
@@ -249,7 +306,7 @@ class _MeetingPageState extends State<MeetingPage>
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: () async {
-        // context.read<HMSNotifier>().leaveRoom();
+        hmsSDK.leave();
         Navigator.pop(context);
         return true;
       },
@@ -257,152 +314,46 @@ class _MeetingPageState extends State<MeetingPage>
           child: Scaffold(
         body: Container(
           height: MediaQuery.of(context).size.height,
-          width: MediaQuery.of(context).size.width,
           child: Column(children: [
-            (remotePeer == null)
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 60.0),
-                      child: Container(
-                        color: Colors.black.withOpacity(0.9),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: const [
-                            CircleAvatar(
-                              radius: 30,
-                              child: Text(
-                                "D",
-                                style: TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                            SizedBox(
-                              height: 30,
-                            ),
-                            Text(
-                              "Connecting...",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  )
-                : remotePeerVideoTrack?.isMute ?? true
-                    ? Center(
-                        child: Container(
-                          height: 100,
-                          width: 100,
-                          decoration:
-                              BoxDecoration(shape: BoxShape.circle, boxShadow: [
-                            BoxShadow(
-                              color: Colors.blue.withAlpha(60),
-                              blurRadius: 10.0,
-                              spreadRadius: 2.0,
-                            ),
-                          ]),
-                        ),
-                      )
-                    : (remotePeerVideoTrack != null)
-                        ? SizedBox(
-                            height: MediaQuery.of(context).size.height,
-                            width: MediaQuery.of(context).size.width,
-                            child: HMSVideoView(
-                                scaleType: ScaleType.SCALE_ASPECT_FILL,
-                                track: remotePeerVideoTrack!,
-                                matchParent: false),
-                          )
-                        : const Center(child: Text("No Video")),
-            remotePeerVideoTrack?.isMute ?? true
-                ? Align(
-                    alignment: Alignment.center,
-                    child: Text(
-                      remotePeer?.name.substring(0, 1) ?? "D",
-                      style: const TextStyle(
-                          fontSize: 24, fontWeight: FontWeight.w600),
-                    ),
-                  )
-                : Container(),
-            localPeerVideoTrack?.isMute ?? true
-                ? Center(
-                    child: Container(
-                      height: 100,
-                      width: 100,
-                      decoration:
-                          BoxDecoration(shape: BoxShape.circle, boxShadow: [
-                        BoxShadow(
-                          color: Colors.blue.withAlpha(60),
-                          blurRadius: 10.0,
-                          spreadRadius: 2.0,
-                        ),
-                      ]),
-                    ),
-                  )
-                : (localPeerVideoTrack != null)
-                    ? SizedBox(
-                        height: MediaQuery.of(context).size.height,
-                        width: MediaQuery.of(context).size.width,
-                        child: HMSVideoView(
-                            scaleType: ScaleType.SCALE_ASPECT_FILL,
-                            track: remotePeerVideoTrack!,
-                            matchParent: false),
-                      )
-                    : const Center(child: Text("No Video")),
-            localPeerVideoTrack?.isMute ?? true
-                ? Align(
-                    alignment: Alignment.center,
-                    child: Text(
-                      remotePeer?.name.substring(0, 1) ?? "D",
-                      style: const TextStyle(
-                          fontSize: 24, fontWeight: FontWeight.w600),
-                    ),
-                  )
-                : Container(),
-            Positioned(
-              top: 10,
-              left: 10,
-              child: GestureDetector(
-                onTap: () {
-                  hmsSDK.leave();
-                  Navigator.pop(context);
-                },
-                child: const Icon(
-                  Icons.arrow_back,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-            Align(
-              alignment: Alignment.bottomCenter,
+            Expanded(
+                child: peerTile(remotePeerVideoTrack, remotePeer, context)),
+            Expanded(child: peerTile(localPeerVideoTrack, localPeer, context)),
+            Container(
+              color: Colors.black,
               child: Padding(
-                padding: const EdgeInsets.only(bottom: 15),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    GestureDetector(
-                      onTap: () async {
-                        hmsSDK.leave();
-                        Navigator.pop(context);
-                      },
-                      child: Container(
-                        decoration:
-                            BoxDecoration(shape: BoxShape.circle, boxShadow: [
-                          BoxShadow(
-                            color: Colors.red.withAlpha(60),
-                            blurRadius: 3.0,
-                            spreadRadius: 5.0,
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 15),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        GestureDetector(
+                          onTap: () async {
+                            hmsSDK.leave();
+                            Navigator.pop(context);
+                          },
+                          child: Container(
+                            decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.red.withAlpha(60),
+                                    blurRadius: 3.0,
+                                    spreadRadius: 5.0,
+                                  ),
+                                ]),
+                            child: const CircleAvatar(
+                              radius: 25,
+                              backgroundColor: Colors.red,
+                              child: Icon(Icons.call_end, color: Colors.white),
+                            ),
                           ),
-                        ]),
-                        child: const CircleAvatar(
-                          radius: 25,
-                          backgroundColor: Colors.red,
-                          child: Icon(Icons.call_end, color: Colors.white),
                         ),
-                      ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -412,39 +363,36 @@ class _MeetingPageState extends State<MeetingPage>
     );
   }
 
-  Widget localPeerTile(
-      HMSVideoTrack? localTrack, HMSPeer? peer, BuildContext context) {
-    return ClipRRect(
-      borderRadius: const BorderRadius.all(Radius.circular(10)),
-      child: Container(
-        height: 150,
-        width: 120,
-        color: Colors.grey.withOpacity(0.1),
-        child: (localTrack != null && !(localTrack.isMute))
-            ? HMSVideoView(
-                track: localTrack,
-              )
-            : Center(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withAlpha(4),
-                    shape: BoxShape.circle,
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Colors.blue,
-                        blurRadius: 20.0,
-                        spreadRadius: 5.0,
-                      ),
-                    ],
-                  ),
-                  child: Text(
-                    peer?.name.substring(0, 1) ?? "D",
-                    style: const TextStyle(
-                        fontSize: 24, fontWeight: FontWeight.w600),
-                  ),
+  Widget peerTile(
+      HMSVideoTrack? videoTrack, HMSPeer? peer, BuildContext context) {
+    return Container(
+      color: Colors.black,
+      child: (videoTrack != null && !(videoTrack.isMute))
+          ? HMSVideoView(
+              track: videoTrack,
+            )
+          : Center(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.blue.withAlpha(4),
+                  shape: BoxShape.circle,
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.blue,
+                      blurRadius: 20.0,
+                      spreadRadius: 5.0,
+                    ),
+                  ],
+                ),
+                child: Text(
+                  peer?.name.substring(0, 1) ?? "D",
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w600),
                 ),
               ),
-      ),
+            ),
     );
   }
 }
